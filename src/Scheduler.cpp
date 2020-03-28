@@ -1,17 +1,16 @@
 
 #include "Arduino.h"
 #include <Scheduler.h>
+#include <time.h>
 
 // Constructor
-Scheduler::Scheduler(int portName)
+Scheduler::Scheduler(DeviceOut deviceOut)
 {
-    _outPort = portName;
-    pinMode(_outPort, OUTPUT);
-    digitalWrite(_outPort, LOW);
+    _deviceOut = deviceOut;
 };
 void Scheduler::tick()
 {
-    long now = time(nullptr);
+    now = time(nullptr);
     // int nowHour = hour(now);
     // if ((now - lastTime) > 60) {
     int offset = now % 3600;
@@ -21,17 +20,18 @@ void Scheduler::tick()
     {
         _lastTime = _mins;
         checkTime();
+        _minute_tick_callback();
     };
 };
 
 void Scheduler::checkTime() {
-    if (isTimeOk() || isMinutesOk()) {
-        digitalWrite(_outPort, HIGH);
+    boolean isCheckOk = (isTimeOk() || isMinutesOk());
+    if (isCheckOk) {
+        _deviceOut.on();
     } else {
-        digitalWrite(_outPort, LOW);
+        _deviceOut.off();
     }
-
-    // @TODO Added callback function.
+    _check_time_callback(isCheckOk);
 }
 
 boolean Scheduler::isTimeOk() {
@@ -51,10 +51,10 @@ boolean Scheduler::isMinutesOk()
 // void Scheduler::setOutPort(int portName){
 // };
 void Scheduler::setTimeOn(TIME setTimeOn){
-
+    _timeOn = setTimeOn;
 };
 void Scheduler::setTimeOff(TIME setTimeOff){
-
+    _timeOff = setTimeOff;
 };
 
 int Scheduler::Test()
@@ -62,7 +62,15 @@ int Scheduler::Test()
     return 21;
 };
 
-Scheduler& Scheduler::setCallback(MY_CALLBACK_SIGNATURE) {
-    this->callback = callback;
-    return *this;
-};
+void Scheduler::onMinuteTick(THandlerFunction fn) {
+    _minute_tick_callback = fn;
+}
+
+void Scheduler::onCheckTimeCallback(THandlerBooleanFunction fn) {
+    _check_time_callback = fn;
+}
+
+// Scheduler& Scheduler::setCallback(MY_CALLBACK_SIGNATURE) {
+//     this->callback = callback;
+//     return *this;
+// };
